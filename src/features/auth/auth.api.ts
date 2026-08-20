@@ -1,5 +1,6 @@
 import type { ApiResponse } from "@/lib/api/api-response";
 import { http } from "@/lib/api/http";
+
 import type {
   AuthUser,
   GoogleLoginRequest,
@@ -7,7 +8,8 @@ import type {
 } from "./auth.types";
 
 /**
- * Exchanges a Google ID token for the app's JWT access token and user profile.
+ * Exchanges a Google ID token for an authenticated app session
+ * and returns the user profile.
  */
 export async function loginWithGoogle(
   payload: GoogleLoginRequest,
@@ -21,7 +23,7 @@ export async function loginWithGoogle(
 }
 
 /**
- * Fetches the currently authenticated user's profile (/auth/me).
+ * Fetches the currently authenticated user's profile.
  */
 export async function getCurrentUser(): Promise<AuthUser> {
   const { data } = await http.get<ApiResponse<AuthUser>>("/auth/me");
@@ -30,7 +32,7 @@ export async function getCurrentUser(): Promise<AuthUser> {
 }
 
 /**
- * Invalidates the current user's session on the server (/auth/logout).
+ * Invalidates the current user's session on the server.
  */
 export async function logoutUser(): Promise<void> {
   await http.post("/auth/logout");
