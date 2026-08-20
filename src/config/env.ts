@@ -1,3 +1,5 @@
+import "server-only";
+
 import type { ZodIssue } from "zod";
 import { z } from "zod";
 
@@ -18,27 +20,26 @@ const envSchema = z.object({
    * @example "http://localhost:5000/api/v1"
    * @example "https://api.cricket.example.com/api/v1"
    */
-  NEXT_PUBLIC_API_BASE_URL: z
+  BACKEND_API_BASE_URL: z
     .string({
-      message: "NEXT_PUBLIC_API_BASE_URL is required and must be a string",
+      message: "BACKEND_API_BASE_URL is required and must be a string",
     })
     .trim()
-    .min(1, "NEXT_PUBLIC_API_BASE_URL must not be empty")
-    .url("NEXT_PUBLIC_API_BASE_URL must be a valid URL")
+    .min(1, "BACKEND_API_BASE_URL must not be empty")
+    .url("BACKEND_API_BASE_URL must be a valid URL")
     .refine((url) => url.startsWith("http://") || url.startsWith("https://"), {
-      message: "NEXT_PUBLIC_API_BASE_URL must start with http:// or https://",
+      message: "BACKEND_API_BASE_URL must start with http:// or https://",
     })
     .transform((url) => url.replace(/\/+$/, "")),
 
-  NEXT_PUBLIC_GOOGLE_CLIENT_ID: z
+  GOOGLE_CLIENT_ID: z
     .string({
-      message: "NEXT_PUBLIC_GOOGLE_CLIENT_ID is required and must be a string",
+      message: "GOOGLE_CLIENT_ID is required and must be a string",
     })
     .trim()
-    .min(1, "NEXT_PUBLIC_GOOGLE_CLIENT_ID must not be empty")
+    .min(1, "GOOGLE_CLIENT_ID must not be empty")
     .refine((id) => id.endsWith(".apps.googleusercontent.com"), {
-      message:
-        "NEXT_PUBLIC_GOOGLE_CLIENT_ID must end with .apps.googleusercontent.com",
+      message: "GOOGLE_CLIENT_ID must end with .apps.googleusercontent.com",
     }),
 });
 
@@ -77,8 +78,8 @@ export class EnvValidationError extends Error {
 // ---------------------------------------------------------------------------
 
 const parsed = envSchema.safeParse({
-  NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL,
-  NEXT_PUBLIC_GOOGLE_CLIENT_ID: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+  BACKEND_API_BASE_URL: process.env.BACKEND_API_BASE_URL,
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
 });
 
 if (!parsed.success) {
@@ -90,6 +91,6 @@ if (!parsed.success) {
 // ---------------------------------------------------------------------------
 
 export const env = Object.freeze({
-  API_BASE_URL: parsed.data.NEXT_PUBLIC_API_BASE_URL,
-  GOOGLE_CLIENT_ID: parsed.data.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+  API_BASE_URL: parsed.data.BACKEND_API_BASE_URL,
+  GOOGLE_CLIENT_ID: parsed.data.GOOGLE_CLIENT_ID,
 } satisfies Record<string, string>);
