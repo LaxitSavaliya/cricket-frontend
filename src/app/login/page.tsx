@@ -1,6 +1,6 @@
 import { GoogleLoginButton } from "@/features/auth/components/GoogleLoginButton";
 
-export default function LoginPage() {
+export default async function LoginPage() {
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-zinc-50 px-4 py-10">
       {/* Background */}

@@ -1,11 +1,14 @@
 "use client";
 
 import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { loginWithGoogle } from "../auth.api";
 
 export function GoogleLoginButton() {
+  const router = useRouter();
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,14 +24,12 @@ export function GoogleLoginButton() {
       setIsLoading(true);
       setError(null);
 
-      const result = await loginWithGoogle({
+      await loginWithGoogle({
         idToken,
       });
 
-      console.log("Logged in user:", result.user);
-
-      // Later:
-      // router.replace("/dashboard");
+      // Login successful → go to home page
+      router.replace("/");
     } catch (error) {
       console.error("Google login failed:", error);
 
@@ -68,9 +69,7 @@ export function GoogleLoginButton() {
       )}
 
       {error && (
-        <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-          {error}
-        </div>
+        <p className="mt-3 text-center text-sm text-red-600">{error}</p>
       )}
     </div>
   );
