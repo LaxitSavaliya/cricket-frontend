@@ -3,19 +3,16 @@ import "server-only";
 import { headers } from "next/headers";
 
 import { env } from "@/config/env";
-import type { ApiResponse } from "@/lib/api/api-response";
 
-import type { AuthUser } from "./auth.types";
-
-export async function getCurrentUserServer(): Promise<AuthUser | null> {
+export async function isAuthenticatedServer(): Promise<boolean> {
   const requestHeaders = await headers();
   const cookieHeader = requestHeaders.get("cookie");
 
   if (!cookieHeader) {
-    return null;
+    return false;
   }
 
-  const response = await fetch(`${env.API_BASE_URL}/auth/me`, {
+  const response = await fetch(`${env.API_BASE_URL}/auth/session`, {
     method: "GET",
     headers: {
       cookie: cookieHeader,
@@ -24,14 +21,12 @@ export async function getCurrentUserServer(): Promise<AuthUser | null> {
   });
 
   if (response.status === 401) {
-    return null;
+    return false;
   }
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch current user: ${response.status}`);
+    throw new Error(`Failed to check authentication: ${response.status}`);
   }
 
-  const result = (await response.json()) as ApiResponse<AuthUser>;
-
-  return result.data;
+  return true;
 }

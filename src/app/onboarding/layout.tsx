@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { isAuthenticatedServer } from "@/features/auth/auth.server";
 import { getPlayerOnboardingStatusServer } from "@/features/player/player.server";
 
-export default async function LoginLayout({
+export default async function OnboardingLayout({
   children,
 }: {
   children: ReactNode;
@@ -12,18 +12,18 @@ export default async function LoginLayout({
   const isAuthenticated = await isAuthenticatedServer();
 
   if (!isAuthenticated) {
-    return children;
+    redirect("/login");
   }
 
   const onboarded = await getPlayerOnboardingStatusServer();
 
   if (onboarded === null) {
-    return children;
+    redirect("/login");
   }
 
-  if (onboarded === false) {
-    redirect("/onboarding");
+  if (onboarded === true) {
+    redirect("/");
   }
 
-  redirect("/");
+  return children;
 }

@@ -1,14 +1,11 @@
 "use client";
 
 import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { loginWithGoogle } from "../auth.api";
 
 export function GoogleLoginButton() {
-  const router = useRouter();
-
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,7 +26,7 @@ export function GoogleLoginButton() {
       });
 
       // Login successful → go to home page
-      router.replace("/");
+      window.location.replace("/");
     } catch (error) {
       console.error("Google login failed:", error);
 

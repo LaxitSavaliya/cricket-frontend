@@ -17,7 +17,7 @@ export function LogoutButton() {
 
       await logoutUser();
 
-      window.location.replace("/");
+      window.location.replace("/login");
     } catch (error) {
       console.error("Logout failed:", error);
     } finally {
