@@ -25,5 +25,5 @@ export default async function LoginLayout({
     redirect("/onboarding");
   }
 
-  redirect("/");
+  redirect("/dashboard");
 }

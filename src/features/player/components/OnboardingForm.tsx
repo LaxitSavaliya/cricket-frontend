@@ -1,190 +1,185 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 
 import { FormField } from "@/components/form/FormField";
 import { Input } from "@/components/ui/Input";
-import { isHttpError } from "@/lib/api/http";
+import { Select } from "@/components/ui/Select";
+import { Switch } from "@/components/ui/Switch";
+import { toast } from "@/components/ui/Toast";
 
-import { createPlayer } from "../player.api";
 import {
   BATTING_STYLE_OPTIONS,
   BOWLING_STYLE_OPTIONS,
   PLAYER_ROLE_OPTIONS,
 } from "../player.constants";
-
+import { useCreatePlayer } from "../player.queries";
+import { createPlayerSchema } from "../player.schema";
 import type {
   BattingStyle,
   BowlingStyle,
   CreatePlayerRequest,
-  PlayerRole,
+  FieldErrors,
+  OnboardingFormData,
 } from "../player.types";
+import { OnboardingSuccessModal } from "./OnboardingSuccessModal";
 
-type FieldErrors = {
-  name?: string;
-  displayName?: string;
-  role?: string;
-  city?: string;
-  state?: string;
-  birthDate?: string;
+const INITIAL_FORM_DATA: OnboardingFormData = {
+  name: "",
+  displayName: "",
+  role: null,
+  canKeepWickets: false,
+  battingStyle: null,
+  bowlingStyle: null,
+  city: "",
+  state: "",
+  birthDate: "",
 };
 
+const FIELD_ELEMENT_IDS: Partial<Record<keyof OnboardingFormData, string>> = {
+  name: "player-name",
+  displayName: "display-name",
+  role: "player-role",
+  battingStyle: "batting-style",
+  bowlingStyle: "bowling-style",
+  city: "city",
+  state: "state",
+  birthDate: "birth-date",
+};
+
+function getLocalTodayString(): string {
+  const today: Date = new Date();
+  const year: number = today.getFullYear();
+  const month: string = String(today.getMonth() + 1).padStart(2, "0");
+  const day: string = String(today.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export function OnboardingForm() {
-  const [name, setName] = useState("");
-  const [displayName, setDisplayName] = useState("");
-
-  const [role, setRole] = useState<PlayerRole | null>(null);
-
-  const [canKeepWickets, setCanKeepWickets] = useState(false);
-
-  const [battingStyle, setBattingStyle] = useState<BattingStyle | null>(null);
-
-  const [bowlingStyle, setBowlingStyle] = useState<BowlingStyle | null>(null);
-
-  const [city, setCity] = useState("");
-  const [state, setState] = useState("");
-  const [birthDate, setBirthDate] = useState("");
-
+  const [formData, setFormData] =
+    useState<OnboardingFormData>(INITIAL_FORM_DATA);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [createdPlayer, setCreatedPlayer] =
+    useState<CreatePlayerRequest | null>(null);
 
-  const [formError, setFormError] = useState<string | null>(null);
+  const today: string = getLocalTodayString();
 
-  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
-
-  const createPlayerMutation = useMutation({
-    mutationFn: createPlayer,
-
-    onSuccess: () => {
-      window.location.replace("/");
+  const updateField = useCallback(
+    <K extends keyof OnboardingFormData>(
+      field: K,
+      value: OnboardingFormData[K],
+    ) => {
+      setFormData((current) => ({ ...current, [field]: value }));
+      setFieldErrors((current) => {
+        if (!current[field]) {
+          return current;
+        }
+        const nextErrors = { ...current };
+        delete nextErrors[field];
+        return nextErrors;
+      });
     },
+    [],
+  );
 
+  const { mutate: createPlayer, isPending: isSubmitting } = useCreatePlayer({
+    onSuccess: (_data, variables) => {
+      setCreatedPlayer(variables);
+    },
     onError: (error) => {
-      if (isHttpError(error)) {
-        setFormError(error.message);
-        return;
-      }
-
-      setFormError("Unable to create your player profile. Please try again.");
+      toast.error("Profile creation failed", error.message);
     },
   });
 
-  const validateForm = (): boolean => {
-    const errors: FieldErrors = {};
+  const validateForm = (): CreatePlayerRequest | null => {
+    const validation = createPlayerSchema.safeParse(formData);
 
-    const normalizedName = name.trim();
-    const normalizedDisplayName = displayName.trim();
-    const normalizedCity = city.trim();
-    const normalizedState = state.trim();
+    if (!validation.success) {
+      const errors: FieldErrors = {};
 
-    if (!normalizedName) {
-      errors.name = "Player name is required.";
-    } else if (normalizedName.length < 2) {
-      errors.name = "Player name must contain at least 2 characters.";
+      validation.error.issues.forEach((issue) => {
+        const field = issue.path[0];
+
+        if (typeof field !== "string" || !(field in INITIAL_FORM_DATA)) {
+          return;
+        }
+
+        const fieldKey = field as keyof OnboardingFormData;
+
+        if (!errors[fieldKey]) {
+          errors[fieldKey] = issue.message;
+        }
+      });
+
+      setFieldErrors(errors);
+
+      const firstErrorField = (
+        Object.keys(FIELD_ELEMENT_IDS) as Array<keyof OnboardingFormData>
+      ).find((key) => errors[key]);
+
+      if (firstErrorField && FIELD_ELEMENT_IDS[firstErrorField]) {
+        const elementId = FIELD_ELEMENT_IDS[firstErrorField];
+        setTimeout(() => {
+          const element = document.getElementById(elementId!);
+          if (element) {
+            element.scrollIntoView({ behavior: "smooth", block: "center" });
+            if ("focus" in element && typeof element.focus === "function") {
+              element.focus();
+            }
+          }
+        }, 50);
+      }
+
+      return null;
     }
 
-    if (normalizedDisplayName && normalizedDisplayName.length < 2) {
-      errors.displayName = "Display name must contain at least 2 characters.";
-    }
-
-    if (!role) {
-      errors.role = "Please select your player role.";
-    }
-
-    if (normalizedCity && normalizedCity.length < 2) {
-      errors.city = "City must contain at least 2 characters.";
-    }
-
-    if (normalizedState && normalizedState.length < 2) {
-      errors.state = "State must contain at least 2 characters.";
-    }
-
-    if (birthDate && birthDate > today) {
-      errors.birthDate = "Birth date cannot be in the future.";
-    }
-
-    setFieldErrors(errors);
-
-    return Object.keys(errors).length === 0;
+    setFieldErrors({});
+    return validation.data;
   };
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (createPlayerMutation.isPending) {
+    if (isSubmitting) {
       return;
     }
 
-    setFormError(null);
-
-    if (!validateForm()) {
+    const validatedData = validateForm();
+    if (!validatedData) {
       return;
     }
 
-    const payload: CreatePlayerRequest = {
-      name: name.trim(),
-      role: role!,
-      canKeepWickets,
-
-      ...(displayName.trim() && {
-        displayName: displayName.trim(),
-      }),
-
-      ...(battingStyle && {
-        battingStyle,
-      }),
-
-      ...(bowlingStyle && {
-        bowlingStyle,
-      }),
-
-      ...(city.trim() && {
-        city: city.trim(),
-      }),
-
-      ...(state.trim() && {
-        state: state.trim(),
-      }),
-
-      ...(birthDate && {
-        birthDate,
-      }),
-    };
-
-    createPlayerMutation.mutate(payload);
+    createPlayer(validatedData);
   };
+
+  if (createdPlayer) {
+    return (
+      <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 sm:py-12 flex items-center justify-center">
+        <OnboardingSuccessModal
+          name={createdPlayer.name}
+          displayName={createdPlayer.displayName ?? ""}
+          role={createdPlayer.role}
+          city={createdPlayer.city ?? ""}
+          state={createdPlayer.state ?? ""}
+          onContinue={() => {
+            window.location.replace("/dashboard");
+          }}
+        />
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 sm:py-12">
       <div className="mx-auto w-full max-w-3xl">
-        <header className="mb-8 text-center">
-          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-950 text-2xl text-white shadow-sm">
-            🏏
-          </div>
-
-          <p className="text-sm font-semibold text-emerald-600">Almost ready</p>
-
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
-            Create your player profile
-          </h1>
-
-          <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-slate-500">
-            Add your cricket details so we can build your player profile and
-            match history.
-          </p>
-        </header>
-
         <form
           onSubmit={handleSubmit}
           noValidate
           className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm"
         >
+          {/* Section 01: Player Details */}
           <section className="border-b border-slate-100 p-6 sm:p-8">
-            <SectionHeader
-              number="01"
-              title="Player details"
-              description="Tell us how you want to appear in the cricket platform."
-            />
+            <SectionHeader number="01" title="Player details" />
 
             <div className="mt-6 grid gap-5 sm:grid-cols-2">
               <FormField
@@ -195,21 +190,12 @@ export function OnboardingForm() {
               >
                 <Input
                   id="player-name"
-                  value={name}
-                  onChange={(event) => {
-                    setName(event.target.value);
-
-                    if (fieldErrors.name) {
-                      setFieldErrors((current) => ({
-                        ...current,
-                        name: undefined,
-                      }));
-                    }
-                  }}
+                  value={formData.name}
+                  onChange={(event) => updateField("name", event.target.value)}
                   placeholder="Enter your full name"
                   maxLength={100}
                   error={Boolean(fieldErrors.name)}
-                  disabled={createPlayerMutation.isPending}
+                  disabled={isSubmitting}
                 />
               </FormField>
 
@@ -221,55 +207,37 @@ export function OnboardingForm() {
               >
                 <Input
                   id="display-name"
-                  value={displayName}
-                  onChange={(event) => {
-                    setDisplayName(event.target.value);
-
-                    if (fieldErrors.displayName) {
-                      setFieldErrors((current) => ({
-                        ...current,
-                        displayName: undefined,
-                      }));
-                    }
-                  }}
+                  value={formData.displayName}
+                  onChange={(event) =>
+                    updateField("displayName", event.target.value)
+                  }
                   placeholder="e.g. Laxit"
                   maxLength={100}
                   error={Boolean(fieldErrors.displayName)}
-                  disabled={createPlayerMutation.isPending}
+                  disabled={isSubmitting}
                 />
               </FormField>
             </div>
           </section>
 
+          {/* Section 02: Playing Role */}
           <section className="border-b border-slate-100 p-6 sm:p-8">
-            <SectionHeader
-              number="02"
-              title="Playing role"
-              description="Choose the role that best represents your game."
-            />
+            <SectionHeader number="02" title="Playing role" />
 
             <FormField required error={fieldErrors.role} className="mt-6">
               <div className="grid gap-3 sm:grid-cols-2">
-                {PLAYER_ROLE_OPTIONS.map((option) => {
-                  const selected = role === option.value;
+                {PLAYER_ROLE_OPTIONS.map((option, index) => {
+                  const selected = formData.role === option.value;
 
                   return (
                     <button
                       key={option.value}
+                      id={index === 0 ? "player-role" : undefined}
                       type="button"
-                      disabled={createPlayerMutation.isPending}
-                      onClick={() => {
-                        setRole(option.value);
-
-                        if (fieldErrors.role) {
-                          setFieldErrors((current) => ({
-                            ...current,
-                            role: undefined,
-                          }));
-                        }
-                      }}
+                      disabled={isSubmitting}
+                      onClick={() => updateField("role", option.value)}
                       className={[
-                        "rounded-2xl border p-4 text-left transition",
+                        "rounded-2xl border p-4 text-left transition cursor-pointer",
                         "disabled:cursor-not-allowed disabled:opacity-60",
 
                         selected
@@ -314,17 +282,14 @@ export function OnboardingForm() {
               </div>
             </FormField>
 
-            <button
-              type="button"
-              disabled={createPlayerMutation.isPending}
-              onClick={() => setCanKeepWickets((value) => !value)}
+            {/* Wicketkeeping Switch */}
+            <div
               className={[
-                "mt-5 flex w-full items-center justify-between rounded-2xl border p-4 text-left transition",
-                "disabled:cursor-not-allowed disabled:opacity-60",
-
-                canKeepWickets
+                "mt-5 flex w-full items-center justify-between rounded-2xl border p-4 transition",
+                isSubmitting ? "opacity-60" : "",
+                formData.canKeepWickets
                   ? "border-emerald-500 bg-emerald-50"
-                  : "border-slate-200 hover:bg-slate-50",
+                  : "border-slate-200",
               ].join(" ")}
             >
               <div>
@@ -335,80 +300,70 @@ export function OnboardingForm() {
                 </p>
               </div>
 
-              <span
-                className={[
-                  "relative h-6 w-11 rounded-full transition",
-                  canKeepWickets ? "bg-emerald-600" : "bg-slate-200",
-                ].join(" ")}
-              >
-                <span
-                  className={[
-                    "absolute top-1 h-4 w-4 rounded-full bg-white shadow transition",
-                    canKeepWickets ? "left-6" : "left-1",
-                  ].join(" ")}
-                />
-              </span>
-            </button>
+              <Switch
+                checked={formData.canKeepWickets}
+                onChange={(checked) => updateField("canKeepWickets", checked)}
+                disabled={isSubmitting}
+                activeColor="bg-emerald-600"
+                aria-label="I can play as a wicketkeeper"
+              />
+            </div>
           </section>
 
+          {/* Section 03: Playing Style */}
           <section className="border-b border-slate-100 p-6 sm:p-8">
-            <SectionHeader
-              number="03"
-              title="Playing style"
-              description="Add your preferred batting and bowling styles."
-            />
+            <SectionHeader number="03" title="Playing style" />
 
             <div className="mt-6 grid gap-5 sm:grid-cols-2">
-              <FormField label="Batting style" optional>
-                <select
-                  value={battingStyle ?? ""}
-                  disabled={createPlayerMutation.isPending}
+              <FormField
+                label="Batting style"
+                htmlFor="batting-style"
+                optional
+                error={fieldErrors.battingStyle}
+              >
+                <Select
+                  id="batting-style"
+                  value={formData.battingStyle ?? ""}
+                  placeholder="Select batting style"
+                  options={BATTING_STYLE_OPTIONS}
+                  error={Boolean(fieldErrors.battingStyle)}
+                  disabled={isSubmitting}
                   onChange={(event) =>
-                    setBattingStyle(
+                    updateField(
+                      "battingStyle",
                       (event.target.value as BattingStyle) || null,
                     )
                   }
-                  className={selectClassName}
-                >
-                  <option value="">Select batting style</option>
-
-                  {BATTING_STYLE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                />
               </FormField>
 
-              <FormField label="Bowling style" optional>
-                <select
-                  value={bowlingStyle ?? ""}
-                  disabled={createPlayerMutation.isPending}
+              <FormField
+                label="Bowling style"
+                htmlFor="bowling-style"
+                optional
+                error={fieldErrors.bowlingStyle}
+              >
+                <Select
+                  id="bowling-style"
+                  value={formData.bowlingStyle ?? ""}
+                  placeholder="Select bowling style"
+                  options={BOWLING_STYLE_OPTIONS}
+                  error={Boolean(fieldErrors.bowlingStyle)}
+                  disabled={isSubmitting}
                   onChange={(event) =>
-                    setBowlingStyle(
+                    updateField(
+                      "bowlingStyle",
                       (event.target.value as BowlingStyle) || null,
                     )
                   }
-                  className={selectClassName}
-                >
-                  <option value="">Select bowling style</option>
-
-                  {BOWLING_STYLE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                />
               </FormField>
             </div>
           </section>
 
+          {/* Section 04: Personal Details */}
           <section className="p-6 sm:p-8">
-            <SectionHeader
-              number="04"
-              title="Personal details"
-              description="Optional information for your player profile."
-            />
+            <SectionHeader number="04" title="Personal details" />
 
             <div className="mt-6 grid gap-5 sm:grid-cols-2">
               <FormField
@@ -419,21 +374,12 @@ export function OnboardingForm() {
               >
                 <Input
                   id="city"
-                  value={city}
-                  onChange={(event) => {
-                    setCity(event.target.value);
-
-                    if (fieldErrors.city) {
-                      setFieldErrors((current) => ({
-                        ...current,
-                        city: undefined,
-                      }));
-                    }
-                  }}
+                  value={formData.city}
+                  onChange={(event) => updateField("city", event.target.value)}
                   placeholder="e.g. Surat"
                   maxLength={100}
                   error={Boolean(fieldErrors.city)}
-                  disabled={createPlayerMutation.isPending}
+                  disabled={isSubmitting}
                 />
               </FormField>
 
@@ -445,21 +391,12 @@ export function OnboardingForm() {
               >
                 <Input
                   id="state"
-                  value={state}
-                  onChange={(event) => {
-                    setState(event.target.value);
-
-                    if (fieldErrors.state) {
-                      setFieldErrors((current) => ({
-                        ...current,
-                        state: undefined,
-                      }));
-                    }
-                  }}
+                  value={formData.state}
+                  onChange={(event) => updateField("state", event.target.value)}
                   placeholder="e.g. Gujarat"
                   maxLength={100}
                   error={Boolean(fieldErrors.state)}
-                  disabled={createPlayerMutation.isPending}
+                  disabled={isSubmitting}
                 />
               </FormField>
 
@@ -473,52 +410,35 @@ export function OnboardingForm() {
                 <Input
                   id="birth-date"
                   type="date"
-                  value={birthDate}
+                  value={formData.birthDate}
                   max={today}
-                  onChange={(event) => {
-                    setBirthDate(event.target.value);
-
-                    if (fieldErrors.birthDate) {
-                      setFieldErrors((current) => ({
-                        ...current,
-                        birthDate: undefined,
-                      }));
-                    }
-                  }}
+                  onChange={(event) =>
+                    updateField("birthDate", event.target.value)
+                  }
                   error={Boolean(fieldErrors.birthDate)}
-                  disabled={createPlayerMutation.isPending}
+                  disabled={isSubmitting}
                 />
               </FormField>
             </div>
 
-            {formError && (
-              <div
-                role="alert"
-                className="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700"
-              >
-                {formError}
-              </div>
-            )}
-
+            {/* Submit Button */}
             <button
               type="submit"
-              disabled={createPlayerMutation.isPending}
-              className="mt-7 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={isSubmitting}
+              className="mt-7 flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-slate-950"
             >
-              {createPlayerMutation.isPending && (
+              {isSubmitting && (
                 <span
                   className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"
                   aria-hidden="true"
                 />
               )}
 
-              {createPlayerMutation.isPending
-                ? "Creating your profile..."
-                : "Complete profile"}
+              {isSubmitting ? "Creating your profile..." : "Complete profile"}
             </button>
 
             <p className="mt-3 text-center text-xs text-slate-400">
-              You can update these details later.
+              You can update these details later from your profile settings.
             </p>
           </section>
         </form>
@@ -527,29 +447,14 @@ export function OnboardingForm() {
   );
 }
 
-function SectionHeader({
-  number,
-  title,
-  description,
-}: {
-  number: string;
-  title: string;
-  description: string;
-}) {
+function SectionHeader({ number, title }: { number: string; title: string }) {
   return (
-    <div className="flex gap-3">
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-xs font-bold text-slate-600">
+    <div className="flex gap-3 items-center">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-200 text-xs font-bold text-slate-600">
         {number}
       </div>
 
-      <div>
-        <h2 className="font-semibold text-slate-950">{title}</h2>
-
-        <p className="mt-1 text-sm leading-5 text-slate-500">{description}</p>
-      </div>
+      <h2 className="font-semibold text-slate-950">{title}</h2>
     </div>
   );
 }
-
-const selectClassName =
-  "h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500";

@@ -1,3 +1,5 @@
+import type { UseMutationOptions } from "@tanstack/react-query";
+
 export type PlayerRole = "BATSMAN" | "BOWLER" | "ALL_ROUNDER";
 
 export type BattingStyle = "RIGHT_HANDED_BATSMAN" | "LEFT_HANDED_BATSMAN";
@@ -18,6 +20,12 @@ export type BowlingStyle =
   | "LEFT_ARM_OFF_SPIN"
   | "LEFT_ARM_LEG_SPIN";
 
+export interface PlayerOption<T extends string> {
+  value: T;
+  label: string;
+  description?: string;
+}
+
 export interface CreatePlayerRequest {
   name: string;
   displayName?: string;
@@ -30,8 +38,34 @@ export interface CreatePlayerRequest {
   birthDate?: string;
 }
 
-export interface PlayerOption<T extends string> {
-  value: T;
-  label: string;
-  description?: string;
+export interface PlayerOnboardingStatus {
+  onboarded: boolean;
 }
+
+export interface OnboardingFormData {
+  name: string;
+  displayName: string;
+  role: PlayerRole | null;
+  canKeepWickets: boolean;
+  battingStyle: BattingStyle | null;
+  bowlingStyle: BowlingStyle | null;
+  city: string;
+  state: string;
+  birthDate: string;
+}
+
+export type FieldErrors = Partial<Record<keyof OnboardingFormData, string>>;
+
+export type OnboardingSuccessModalProps = Pick<
+  CreatePlayerRequest,
+  "name" | "displayName" | "role" | "city" | "state"
+> & {
+  onContinue: () => void;
+};
+
+export type CreatePlayerResult = void;
+
+export type CreatePlayerMutationOptions = Omit<
+  UseMutationOptions<CreatePlayerResult, Error, CreatePlayerRequest>,
+  "mutationFn"
+>;

@@ -22,7 +22,7 @@ export default async function OnboardingLayout({
   }
 
   if (onboarded === true) {
-    redirect("/");
+    redirect("/dashboard");
   }
 
   return children;

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 interface FormFieldProps {
+  id?: string;
   label?: string;
   htmlFor?: string;
   children: ReactNode;
@@ -15,6 +16,7 @@ interface FormFieldProps {
 }
 
 export function FormField({
+  id,
   label,
   htmlFor,
   children,
@@ -25,7 +27,7 @@ export function FormField({
   className = "",
 }: FormFieldProps) {
   return (
-    <div className={className}>
+    <div id={id} className={className}>
       {label && (
         <label
           htmlFor={htmlFor}

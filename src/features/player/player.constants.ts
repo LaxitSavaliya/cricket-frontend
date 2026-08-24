@@ -5,7 +5,19 @@ import type {
   PlayerRole,
 } from "./player.types";
 
-export const PLAYER_ROLE_OPTIONS: PlayerOption<PlayerRole>[] = [
+function extractOptionValues<T extends string>(
+  options: readonly PlayerOption<T>[],
+): [T, ...T[]] {
+  const values = options.map((option) => option.value);
+
+  if (values.length === 0) {
+    throw new Error("Player options cannot be empty.");
+  }
+
+  return values as [T, ...T[]];
+}
+
+export const PLAYER_ROLE_OPTIONS = [
   {
     value: "BATSMAN",
     label: "Batsman",
@@ -21,9 +33,9 @@ export const PLAYER_ROLE_OPTIONS: PlayerOption<PlayerRole>[] = [
     label: "All-rounder",
     description: "Contributes with both bat and ball.",
   },
-];
+] as const satisfies readonly PlayerOption<PlayerRole>[];
 
-export const BATTING_STYLE_OPTIONS: PlayerOption<BattingStyle>[] = [
+export const BATTING_STYLE_OPTIONS = [
   {
     value: "RIGHT_HANDED_BATSMAN",
     label: "Right-handed",
@@ -32,9 +44,9 @@ export const BATTING_STYLE_OPTIONS: PlayerOption<BattingStyle>[] = [
     value: "LEFT_HANDED_BATSMAN",
     label: "Left-handed",
   },
-];
+] as const satisfies readonly PlayerOption<BattingStyle>[];
 
-export const BOWLING_STYLE_OPTIONS: PlayerOption<BowlingStyle>[] = [
+export const BOWLING_STYLE_OPTIONS = [
   {
     value: "RIGHT_ARM_FAST",
     label: "Right-arm fast",
@@ -91,4 +103,10 @@ export const BOWLING_STYLE_OPTIONS: PlayerOption<BowlingStyle>[] = [
     value: "LEFT_ARM_LEG_SPIN",
     label: "Left-arm leg spin",
   },
-];
+] as const satisfies readonly PlayerOption<BowlingStyle>[];
+
+export const PLAYER_ROLE_VALUES = extractOptionValues(PLAYER_ROLE_OPTIONS);
+
+export const BATTING_STYLE_VALUES = extractOptionValues(BATTING_STYLE_OPTIONS);
+
+export const BOWLING_STYLE_VALUES = extractOptionValues(BOWLING_STYLE_OPTIONS);

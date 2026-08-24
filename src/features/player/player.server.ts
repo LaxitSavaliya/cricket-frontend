@@ -4,10 +4,7 @@ import { headers } from "next/headers";
 
 import { env } from "@/config/env";
 import type { ApiResponse } from "@/lib/api/api-response";
-
-interface PlayerOnboardingStatus {
-  onboarded: boolean;
-}
+import type { PlayerOnboardingStatus } from "./player.types";
 
 export async function getPlayerOnboardingStatusServer(): Promise<
   boolean | null
