@@ -1,14 +1,20 @@
 import { env } from "@/config/env";
 
 export async function POST(request: Request) {
+  const cookieHeader = request.headers.get("cookie");
   const body = await request.text();
 
   const backendResponse = await fetch(
-    `${env.API_BASE_URL}/auth/player/google`,
+    `${env.API_BASE_URL}/players/create-player`,
     {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        ...(cookieHeader
+          ? {
+              cookie: cookieHeader,
+            }
+          : {}),
       },
       body,
       cache: "no-store",
@@ -17,21 +23,11 @@ export async function POST(request: Request) {
 
   const responseBody = await backendResponse.text();
 
-  const headers = new Headers();
-
-  headers.set(
-    "Content-Type",
-    backendResponse.headers.get("content-type") ?? "application/json",
-  );
-
-  const setCookie = backendResponse.headers.get("set-cookie");
-
-  if (setCookie) {
-    headers.set("set-cookie", setCookie);
-  }
-
   return new Response(responseBody, {
     status: backendResponse.status,
-    headers,
+    headers: {
+      "Content-Type":
+        backendResponse.headers.get("content-type") ?? "application/json",
+    },
   });
 }

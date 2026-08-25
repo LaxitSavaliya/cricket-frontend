@@ -1,14 +1,14 @@
 "use client";
 
 import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
+
+import { toast } from "@/components/ui/Toast";
+import { isHttpError } from "@/lib/api/http";
 
 import { loginWithGoogle } from "../auth.api";
 
 export function GoogleLoginButton() {
-  const router = useRouter();
-
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -16,7 +16,9 @@ export function GoogleLoginButton() {
     const idToken = credentialResponse.credential;
 
     if (!idToken) {
-      setError("Google did not return an ID token.");
+      const msg = "Google did not return an ID token.";
+      setError(msg);
+      toast.error("Sign-in failed", msg);
       return;
     }
 
@@ -28,15 +30,26 @@ export function GoogleLoginButton() {
         idToken,
       });
 
-      // Login successful → go to home page
-      router.replace("/");
-    } catch (error) {
-      console.error("Google login failed:", error);
+      // Login successful → redirect
+      window.location.replace("/dashboard");
+    } catch (err) {
+      const message = isHttpError(err)
+        ? err.message
+        : err instanceof Error
+          ? err.message
+          : "Unable to sign in with Google. Please try again.";
 
-      setError("Unable to sign in with Google. Please try again.");
+      setError(message);
+      toast.error("Sign-in failed", message);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleFailure = () => {
+    const message = "Google sign-in was unsuccessful. Please try again.";
+    setError(message);
+    toast.error("Sign-in cancelled", message);
   };
 
   return (
@@ -48,10 +61,7 @@ export function GoogleLoginButton() {
       >
         <GoogleLogin
           onSuccess={handleSuccess}
-          onError={() => {
-            console.error("Google sign-in failed");
-            setError("Google sign-in was unsuccessful. Please try again.");
-          }}
+          onError={handleFailure}
           type="standard"
           theme="outline"
           size="large"
@@ -69,7 +79,9 @@ export function GoogleLoginButton() {
       )}
 
       {error && (
-        <p className="mt-3 text-center text-sm text-red-600">{error}</p>
+        <p className="mt-3 text-center text-sm font-medium text-red-600">
+          {error}
+        </p>
       )}
     </div>
   );

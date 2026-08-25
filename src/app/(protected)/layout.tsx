@@ -1,16 +1,17 @@
 import { redirect } from "next/navigation";
+
 import type { ReactNode } from "react";
 
-import { getCurrentUserServer } from "@/features/auth/auth.server";
+import { isAuthenticatedServer } from "@/features/auth/auth.server";
 
 export default async function ProtectedLayout({
   children,
-}: {
+}: Readonly<{
   children: ReactNode;
-}) {
-  const user = await getCurrentUserServer();
+}>) {
+  const isAuthenticated = await isAuthenticatedServer();
 
-  if (!user) {
+  if (!isAuthenticated) {
     redirect("/login");
   }
 

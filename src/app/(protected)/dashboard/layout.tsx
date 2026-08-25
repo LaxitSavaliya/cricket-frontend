@@ -1,29 +1,23 @@
 import { redirect } from "next/navigation";
+
 import type { ReactNode } from "react";
 
-import { isAuthenticatedServer } from "@/features/auth/auth.server";
 import { getPlayerOnboardingStatusServer } from "@/features/player/player.server";
 
-export default async function LoginLayout({
+export default async function DashboardLayout({
   children,
-}: {
+}: Readonly<{
   children: ReactNode;
-}) {
-  const isAuthenticated = await isAuthenticatedServer();
-
-  if (!isAuthenticated) {
-    return children;
-  }
-
+}>) {
   const onboarded = await getPlayerOnboardingStatusServer();
 
   if (onboarded === null) {
-    return children;
+    redirect("/login");
   }
 
-  if (onboarded === false) {
+  if (!onboarded) {
     redirect("/onboarding");
   }
 
-  redirect("/dashboard");
+  return children;
 }
