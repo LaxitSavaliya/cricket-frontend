@@ -3,14 +3,17 @@ import { env } from "@/config/env";
 export async function POST(request: Request) {
   const body = await request.text();
 
-  const backendResponse = await fetch(`${env.API_BASE_URL}/auth/google`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
+  const backendResponse = await fetch(
+    `${env.API_BASE_URL}/auth/player/google`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body,
+      cache: "no-store",
     },
-    body,
-    cache: "no-store",
-  });
+  );
 
   const responseBody = await backendResponse.text();
 

@@ -12,7 +12,7 @@ export async function isAuthenticatedServer(): Promise<boolean> {
     return false;
   }
 
-  const response = await fetch(`${env.API_BASE_URL}/auth/session`, {
+  const response = await fetch(`${env.API_BASE_URL}/auth/player/session`, {
     method: "GET",
     headers: {
       cookie: cookieHeader,
