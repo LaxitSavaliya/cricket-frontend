@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit",
     "format:check": "prettier . --check",
     "format:write": "prettier . --write",
-    "clean": "node -e \"const fs=require('fs');['.next','out','dist','coverage'].forEach(p=>fs.rmSync(p,{recursive:true,force:true}))\"",
+    "clean": "node -e \"const fs=require('fs');['.next','out','dist'].forEach(p=>fs.rmSync(p,{recursive:true,force:true}))\"",
     "check": "npm run format:check && npm run lint && npm run typecheck && npm run build"
   },
   "dependencies": {
